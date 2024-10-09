@@ -10,6 +10,13 @@ The api key check is bypassed when rendering custom html strings. During this ti
 if an attacker knew the url, and an ID for a render request they may be able to
 capture the temporarily cached html and its contents.
 
+## Known Issues
+
+In the current configuration only a single instance of headless chrome can be started. Concurrent requests can be made to this api, but they will block until the
+current rendering process finishes.
+
+Plans are to support parallel rendering.
+
 ## Configuration
 
 The following settings can be configured in appsettings.json, environment variables,

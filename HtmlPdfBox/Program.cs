@@ -2,20 +2,27 @@ using HtmlPdfBox;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
+// configure services
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<AppSettings>(builder.Configuration);
 builder.Services.AddSingleton<Renderer>();
 
+// configure app pipeline
 var app = builder.Build();
 app.UseHttpsRedirection();
 app.UseDeveloperExceptionPage();
 
+// log settings
 var options = app.Services.GetRequiredService<IOptions<AppSettings>>();
-var renderer = app.Services.GetRequiredService<Renderer>();
-using var httpClient = new HttpClient();
-
 app.Logger.LogInformation("running app settings: {settings}", options.Value);
 
+// get services
+var renderer = app.Services.GetRequiredService<Renderer>();
+var workerCount = Math.Max(1, options.Value.MaxWorkers);
+using var semaphore = new SemaphoreSlim(workerCount, workerCount);
+using var httpClient = new HttpClient();
+
+// configure auth middleware
 if (string.IsNullOrWhiteSpace(options.Value.ApiKey))
 {
     app.Logger.LogWarning("YOU HAVE NOT CONFIGURED AN API KEY, ANYBODY CAN ACCESS THIS");
@@ -50,6 +57,7 @@ else
     });
 }
 
+// routes
 app.MapGet("/html/{id}", (Guid id) =>
 {
     var html = renderer.GetHtml(id);
@@ -58,14 +66,47 @@ app.MapGet("/html/{id}", (Guid id) =>
 
 app.MapPost("/render/html", async ([FromBody] RenderHtmlRequest request, CancellationToken cancellationToken) =>
 {
-    var data = await renderer.RenderAsync(request, cancellationToken);
-    return Results.File(data, contentType: "application/pdf", "rendered.pdf");
+    await AcquireWorkerAsync(cancellationToken);
+
+    try
+    {
+        var data = await renderer.RenderAsync(request, cancellationToken);
+        return Results.File(data, contentType: "application/pdf", "rendered.pdf");
+    }
+    finally
+    {
+        ReleaseWorker();
+    }
 });
 
 app.MapPost("/render/url", async ([FromBody] RenderUrlRequest request, CancellationToken cancellationToken) =>
 {
-    var data = await renderer.RenderAsync(request, cancellationToken);
-    return Results.File(data, contentType: "application/pdf", "rendered.pdf");
+    await AcquireWorkerAsync(cancellationToken);
+
+    try
+    {
+        var data = await renderer.RenderAsync(request, cancellationToken);
+        return Results.File(data, contentType: "application/pdf", "rendered.pdf");
+    }
+    finally
+    {
+        ReleaseWorker();
+    }
 });
 
 app.Run();
+return;
+
+// local functions
+async Task AcquireWorkerAsync(CancellationToken cancellationToken)
+{
+    app.Logger.LogInformation("Waiting for worker");
+    await semaphore.WaitAsync(cancellationToken);
+    app.Logger.LogInformation("Acquired worker");
+}
+
+void ReleaseWorker()
+{
+    semaphore.Release();
+    app.Logger.LogInformation("Released worker");
+}

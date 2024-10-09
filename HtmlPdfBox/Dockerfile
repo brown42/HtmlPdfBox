@@ -6,11 +6,14 @@ EXPOSE 8081
 
 USER root
 
-# part of this borrowed from https://github.com/yukinying/chrome-headless-browser-docker
+# part of this borrowed from https://github.com/yukinying/chrome-headless-browser-docker and https://github.com/puppeteer/puppeteer/blob/main/docker/Dockerfile
+
 RUN apt-get update -qqy \
   && apt-get -qqy install \
        dumb-init gnupg wget ca-certificates apt-transport-https \
        socat \
+       fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-khmeros \
+       fonts-kacst fonts-freefont-ttf dbus dbus-x11 \
   && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 

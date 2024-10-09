@@ -36,10 +36,8 @@ public class Renderer
         try
         {
             CacheHtml(id, request.Html);
-            var filename = GetFileName(id);
             var url = $"{_settings.InternalUrl}/html/{id}";
-            var data = await RenderUrlAsync(url, filename, cancellationToken);
-            File.Delete(filename);
+            var data = await RenderUrlAsync(url, id, cancellationToken);
             return data;
         }
         finally
@@ -58,9 +56,7 @@ public class Renderer
         
         try
         {
-            var filename = GetFileName(id);
-            var data = await RenderUrlAsync(request.Url, filename, cancellationToken);
-            File.Delete(filename);
+            var data = await RenderUrlAsync(request.Url, id, cancellationToken);
             return data;
         }
         finally
@@ -70,14 +66,18 @@ public class Renderer
         }
     }
 
-    private async Task<byte[]> RenderUrlAsync(string url, string filename, CancellationToken cancellationToken)
+    private async Task<byte[]> RenderUrlAsync(string url, Guid id, CancellationToken cancellationToken)
     {
+        var filename = GetFileName(id);
+
         var args = new List<string>(_settings.ChromeArgs)
         {
             $"--print-to-pdf={filename}",
             url
         };
-        var process = Process.Start(new ProcessStartInfo(_settings.ChromePath, args)
+
+        _log.LogInformation("starting chrome process");
+        using var process = Process.Start(new ProcessStartInfo(_settings.ChromePath, args)
         {
             WindowStyle = ProcessWindowStyle.Hidden,
             CreateNoWindow = false,
@@ -85,11 +85,18 @@ public class Renderer
 
         if (process == null)
         {
+            _log.LogInformation("unable to create chrome process");
             throw new InvalidOperationException("unable to create chrome process");
         }
-        
+
+        _log.LogInformation("waiting for chrome process to exit");
         await process.WaitForExitAsync(cancellationToken);
+
+        _log.LogInformation("reading file '{filename}'", filename);
         var data = await File.ReadAllBytesAsync(filename, cancellationToken);
+
+        _log.LogInformation("removed file '{filename}'", filename);
+        File.Delete(filename);
 
         return data;
     }
