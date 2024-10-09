@@ -34,6 +34,10 @@ You can do this by configuring an environment variable named either:
 
 `ASPNETCORE_ApiKey` or `DOTNET_ApiKey`
 
+## Docker Compose
+
+`docker compose up --detach`
+
 ## Building Docker
 
 - Either build the dockerfile or run it locally using the included docker-compose file
