@@ -6,6 +6,7 @@ EXPOSE 8081
 
 USER root
 
+# part of this borrowed from https://github.com/yukinying/chrome-headless-browser-docker
 RUN apt-get update -qqy \
   && apt-get -qqy install \
        dumb-init gnupg wget ca-certificates apt-transport-https \
