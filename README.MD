@@ -6,7 +6,7 @@
 
 **Imporant** 
 
-THe api key check is bypassed when rendering custom html strings. During this time
+The api key check is bypassed when rendering custom html strings. During this time
 if an attacker knew the url, and an ID for a render request they may be able to
 capture the temporarily cached html and its contents.
 
@@ -52,12 +52,12 @@ run `dotnet build` from the solution directory.
 
 There are two endpoints:
 
-POST `/render/html
+POST `/render/html`
 ```json
 { "html": "<html><body>some html</body></html>" }
 ```
 
-POST `/render/url
+POST `/render/url`
 ```json
 { "url": "https://www.google.com" }
 ```
