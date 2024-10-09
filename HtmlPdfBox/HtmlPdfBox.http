@@ -1,0 +1,19 @@
+@HtmlPdfBox_HostAddress = https://localhost:7102
+
+POST {{HtmlPdfBox_HostAddress}}/render/html
+Content-Type: application/json
+X-Api-Key: NotConfigurableYet
+
+{
+  "Html": "<html><body><strong>hello world</strong></body></html>"
+}
+###
+
+POST {{HtmlPdfBox_HostAddress}}/render/url
+Content-Type: application/json
+X-Api-Key: NotConfigurableYet
+
+{
+  "Url": "https://www.google.com"
+}
+###

@@ -1,0 +1,8 @@
+﻿services:
+  htmlpdfbox:
+    image: htmlpdfbox
+    build:
+      context: .
+      dockerfile: HtmlPdfBox/Dockerfile
+    ports:
+      - "8080:8080"
