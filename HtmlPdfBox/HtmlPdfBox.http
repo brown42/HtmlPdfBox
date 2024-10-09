@@ -1,8 +1,8 @@
-@HtmlPdfBox_HostAddress = https://localhost:7102
+@HtmlPdfBox_HostAddress = http://localhost:8080
 
 POST {{HtmlPdfBox_HostAddress}}/render/html
 Content-Type: application/json
-X-Api-Key: NotConfigurableYet
+X-Api-Key: PleaseConfigureThis
 
 {
   "Html": "<html><body><strong>hello world</strong></body></html>"
@@ -11,7 +11,7 @@ X-Api-Key: NotConfigurableYet
 
 POST {{HtmlPdfBox_HostAddress}}/render/url
 Content-Type: application/json
-X-Api-Key: NotConfigurableYet
+X-Api-Key: PleaseConfigureThis
 
 {
   "Url": "https://www.google.com"
