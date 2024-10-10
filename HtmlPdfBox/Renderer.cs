@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
+using HtmlAgilityPack;
 using Microsoft.Extensions.Options;
 
 namespace HtmlPdfBox;
@@ -8,7 +9,7 @@ public class Renderer
 {
     private readonly ILogger<Renderer> _log;
     private readonly AppSettings _settings;
-    private readonly ConcurrentDictionary<Guid, string> _htmlCache = new();
+    private readonly ConcurrentDictionary<Guid, RenderHtmlRequest> _htmlCache = new();
 
     public Renderer(ILogger<Renderer> log, IOptions<AppSettings> options)
     {
@@ -23,8 +24,47 @@ public class Renderer
 
     public string GetHtml(Guid id)
     {
-        if (!_htmlCache.TryGetValue(id, out var html)) throw new InvalidOperationException($"invalid html id {id}");
-        return html;
+        if (!_htmlCache.TryGetValue(id, out var req)) throw new InvalidOperationException($"invalid html id {id}");
+        var html = req.Html;
+
+        // if no base url needed return original html
+        if (string.IsNullOrWhiteSpace(req.BaseUrl)) return html;
+        
+        // otherwise we need to inject a new one
+        var doc = new HtmlDocument();
+        doc.LoadHtml(html);
+            
+        // remove any existing <base/> tag
+        var bases = doc.DocumentNode.Descendants().Where(x => x.Name == "base").ToArray();
+        foreach (var b in bases)
+        {
+            b.Remove();
+        }
+            
+        // inject a new <base/> tag
+        var head = doc.DocumentNode.SelectSingleNode("//head");
+            
+        // inject a <head/> tag
+        if (head == null)
+        {
+            // find <body/> tag
+            var body = doc.DocumentNode.SelectSingleNode("//body") ??
+                       throw new InvalidOperationException("cannot inject a base element without at least a <body/> tag");
+            
+            // create <head/>
+            head = doc.CreateElement("head");
+            body.ParentNode.InsertBefore(head, body);
+        }
+        
+        // create <base/>
+        var baseTag = doc.CreateElement("base");
+        baseTag.SetAttributeValue("href", req.BaseUrl);
+        head.AppendChild(baseTag);
+        
+        // serialize
+        using var writer = new StringWriter();
+        doc.Save(writer);
+        return writer.ToString();
     }
     
     public async Task<byte[]> RenderAsync(RenderHtmlRequest request, CancellationToken cancellationToken = default)
@@ -35,7 +75,7 @@ public class Renderer
         
         try
         {
-            CacheHtml(id, request.Html);
+            CacheHtml(id, request);
             var url = $"{_settings.InternalUrl}/html/{id}";
             var data = await RenderUrlAsync(url, id, cancellationToken);
             return data;
@@ -106,9 +146,9 @@ public class Renderer
         return Path.Combine(_settings.OutputPath, $"{id:N}.pdf");
     }
 
-    private void CacheHtml(Guid id, string html)
+    private void CacheHtml(Guid id, RenderHtmlRequest req)
     {
-        _htmlCache[id] = html;
+        _htmlCache[id] = req;
     }
 
     private void ClearCache(Guid id)

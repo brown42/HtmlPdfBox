@@ -61,7 +61,10 @@ There are two endpoints:
 
 POST `/render/html`
 ```json
-{ "html": "<html><body>some html</body></html>" }
+{ 
+  "html": "<html><body>some html</body></html>", 
+  "baseUrl": "https://foo" // optional, only necessary if your html has relative urls
+}
 ```
 
 POST `/render/url`
