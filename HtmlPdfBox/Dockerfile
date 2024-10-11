@@ -6,29 +6,36 @@ EXPOSE 8081
 
 USER root
 
-# part of this borrowed from https://github.com/yukinying/chrome-headless-browser-docker and https://github.com/puppeteer/puppeteer/blob/main/docker/Dockerfile
+# some parts borrowed from https://github.com/puppeteer/puppeteer/blob/main/docker/Dockerfile
 
-RUN apt-get update -qqy \
-  && apt-get -qqy install \
-       dumb-init gnupg wget ca-certificates apt-transport-https \
-       socat \
-       fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-khmeros \
-       fonts-kacst fonts-freefont-ttf dbus dbus-x11 \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+# Configure default locale (important for chrome-headless-shell).
+ENV LANG en_US.UTF-8
+ENV DBUS_SESSION_BUS_ADDRESS autolaunch:
+ENV NVM_DIR "/root/.nvm"
+ENV NVM_DIR /usr/local/nvm
+ENV NODE_VERSION 20.18.0
+
+# Install latest chrome dev package and fonts to support major charsets (Chinese, Japanese, Arabic, Hebrew, Thai and a few others)
+# Note: this installs the necessary libs to make the bundled version of Chrome that Puppeteer
+# installs, work.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-khmeros \
+    fonts-kacst fonts-freefont-ttf dbus dbus-x11 dumb-init curl 
 
 
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
-  && echo "deb https://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
-  && apt-get update -qqy \
-  && apt-get -qqy install google-chrome-unstable \
-  && rm /etc/apt/sources.list.d/google-chrome.list \
-  && rm -rf /var/lib/apt/lists/* /var/cache/apt/* 
+RUN mkdir -p /usr/local/nvm
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+RUN /bin/bash -c "source $NVM_DIR/nvm.sh && nvm install $NODE_VERSION && nvm use --delete-prefix $NODE_VERSION"
 
-USER root
-RUN useradd headless --shell /bin/bash --create-home \
-  && usermod -a -G sudo headless \
-  && echo 'ALL ALL = (ALL) NOPASSWD: ALL' >> /etc/sudoers \
-  && echo 'headless:nopassword' | chpasswd
+ENV NODE_PATH $NVM_DIR/versions/node/v$NODE_VERSION/bin
+ENV PATH $NODE_PATH:$PATH
+
+RUN npm i @puppeteer/browsers \
+    && npx @puppeteer/browsers install chrome@128.0.6613.119 --install-deps 
+
+ENV PUPPETEER_EXECUTABLE_PATH /app/chrome/linux-128.0.6613.119/chrome-linux64/chrome
+
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
@@ -44,7 +51,6 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "HtmlPdfBox.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
-USER headless
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "HtmlPdfBox.dll", "ChromePath=/usr/bin/google-chrome", "OutputPath=/home/headless/output_cache", "InternalUrl=http://localhost:8080"]
+CMD ["dotnet", "HtmlPdfBox.dll", "ChromePath=/usr/bin/google-chrome", "OutputPath=/home/headless/output_cache", "InternalUrl=http://localhost:8080"]

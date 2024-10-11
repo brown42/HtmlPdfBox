@@ -5,7 +5,8 @@ Content-Type: application/json
 X-Api-Key: PleaseConfigureThis
 
 {
-  "Html": "<html><body><strong>hello world</strong></body></html>"
+  "Html": "<html><body><strong>hello world</strong><div><img src=\"/uu/api/res/1.2/Kx7SRD.kMJSsSNLeCcwCvQ--~B/Zmk9c3RyaW07aD0yNzI7cT05NTt3PTU2MDthcHBpZD15dGFjaHlvbg--/https://s.yimg.com/os/creatr-uploaded-images/2024-10/cec972e0-86a1-11ef-af77-169d1fd56c9c.cf.webp\"/></body></html>",
+  "BaseUrl": "https://s.yimg.com"
 }
 ###
 

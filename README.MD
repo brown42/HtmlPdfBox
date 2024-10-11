@@ -1,21 +1,4 @@
-﻿A very minimal api to render html (strings, and urls) to pdfs using headless chrome.
-
-- The api supports a basic api key check.
-- You're responsible for checking html for safety.
-- You're responsible for checking urls for safety.
-
-**Imporant** 
-
-The api key check is bypassed when rendering custom html strings. During this time
-if an attacker knew the url, and an ID for a render request they may be able to
-capture the temporarily cached html and its contents.
-
-## Known Issues
-
-In the current configuration only a single instance of headless chrome can be started. Concurrent requests can be made to this api, but they will block until the
-current rendering process finishes.
-
-Plans are to support parallel rendering.
+﻿A very minimal api to render html (strings, and urls) as pdfs using headless chrome.
 
 ## Configuration
 
@@ -26,30 +9,23 @@ See https://learn.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?vi
 
 ### Settings
 
-| key         | value                                               |
-|-------------|-----------------------------------------------------|
-| ChromePath  | Path to chrome executable                           |
-| OutputPath  | Path to pdf output cache                            |
-| InternalUrl | Local URL for HtmlPdfBox                            |
-| ApiKey      | API key to access service, pass in X-Api-Key header |
+| key         | value                                                      |
+|-------------|------------------------------------------------------------|
+| ChromePath  | Path to chrome executable                                  |
+| OutputPath  | Path to pdf output cache                                   |
+| InternalUrl | Local URL for HtmlPdfBox                                   |
+| ApiKey      | API key to access service, pass in X-Api-Key header        |
+| MaxWorkers  | Maximum number of chrome worker instances to allow at once |
 
 ## Docker
 
-**Docker forces most settings, the only thing you should set is the ApiKey**
+Build and install the docker image, or use the provided docker-compose file.
 
-You can do this by configuring an environment variable named either:
+To use the container configure two environment variables:
+- DOTNET_ApiKey
+- DOTNET_MaxWorkers
 
-`ASPNETCORE_ApiKey` or `DOTNET_ApiKey`
-
-## Docker Compose
-
-`docker compose up --detach`
-
-## Building Docker
-
-- Either build the dockerfile or run it locally using the included docker-compose file
-
-## Building Solution
+## Building
 
 run `dotnet build` from the solution directory.
 
@@ -57,7 +33,7 @@ run `dotnet build` from the solution directory.
 
 - All requests should include an `X-Api-Key` header, the default value is `PleaseConfigureThis`
 
-There are two endpoints:
+There are two endpoints, both return the pdf directly.
 
 POST `/render/html`
 ```json
@@ -69,5 +45,7 @@ POST `/render/html`
 
 POST `/render/url`
 ```json
-{ "url": "https://www.google.com" }
+{ 
+  "url": "https://www.google.com"
+}
 ```

@@ -40,10 +40,6 @@ else
                 key.FirstOrDefault(),
                 StringComparison.InvariantCulture);
         }
-        else
-        {
-            authenticated = context.Request.Path.StartsWithSegments("/html");
-        }
 
         if (authenticated)
         {
@@ -58,12 +54,6 @@ else
 }
 
 // routes
-app.MapGet("/html/{id}", (Guid id) =>
-{
-    var html = renderer.GetHtml(id);
-    return Results.Content(html, "text/html");
-});
-
 app.MapPost("/render/html", async ([FromBody] RenderHtmlRequest request, CancellationToken cancellationToken) =>
 {
     await AcquireWorkerAsync(cancellationToken);
@@ -100,13 +90,13 @@ return;
 // local functions
 async Task AcquireWorkerAsync(CancellationToken cancellationToken)
 {
-    app.Logger.LogInformation("Waiting for worker");
+    app.Logger.LogInformation("Waiting for worker ({count} free)", semaphore.CurrentCount);
     await semaphore.WaitAsync(cancellationToken);
-    app.Logger.LogInformation("Acquired worker");
+    app.Logger.LogInformation("Acquired worker ({count} free)", semaphore.CurrentCount);
 }
 
 void ReleaseWorker()
 {
     semaphore.Release();
-    app.Logger.LogInformation("Released worker");
+    app.Logger.LogInformation("Released worker ({count} free)", semaphore.CurrentCount);
 }
